@@ -3,278 +3,275 @@
 <head>
   <meta charset="UTF-8" />
   <title>First Page PDF to JPG Converter</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-#app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  box-sizing: border-box;
-  background: #fdfdfd;
-  border: 1px solid #ddd;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-}
-    #dropZone {
-      border: 2px dashed #aaa;
-      padding: 20px;
-      margin-bottom: 20px;
-      text-align: center;
-      transition: background 0.3s;
-    }
-    #dropZone.dragover {
-      background: #eef;
-      border-color: #66f;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-    td:nth-child(3) {
-      word-break: break-word;
-      white-space: normal;      
-    }
-    img {
-      height: 80px;
-      max-width: 100px;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-  </style>
+	  <style>
+	    body { font-family: sans-serif; padding: 20px; }
+		#app {
+		  max-width: 1200px;
+		  margin: 0 auto;
+		  padding: 20px;
+		  box-sizing: border-box;
+		  background: #fdfdfd;
+		  border: 1px solid #ddd;
+		  box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+		}
+	    #dropZone {
+	      border: 2px dashed #aaa;
+	      padding: 20px;
+	      margin-bottom: 20px;
+	      text-align: center;
+	      transition: background 0.3s;
+	    }
+	    #dropZone.dragover {
+	      background: #eef;
+	      border-color: #66f;
+	    }
+	    table {
+	      width: 100%;
+	      border-collapse: collapse;
+	      margin-top: 20px;
+	    }
+	    th, td {
+	      border: 1px solid #ddd;
+	      padding: 10px;
+	      text-align: left;
+	    }
+	    td:nth-child(3) {
+	      word-break: break-word;
+	      white-space: normal;      
+	    }
+	    img {
+	      height: 80px;
+	      max-width: 100px;
+	      border: 1px solid #ccc;
+	    }
+	    button {
+	      padding: 6px 12px;
+	      font-size: 14px;
+	      cursor: pointer;
+	    }
+	  </style>
 </head>
 <body>
-<div id="app">
-  <h1>First Page PDF to JPG Converter</h1>
-	<p style="color: #666; margin-top: -8px; font-size: 14px;">
-  		Converts the first page of each PDF to a high-quality JPG thumbnail image.
-	</p>
-  <h3>Upload Your PDF Files</h3>
-  <input type="file" id="pdfInput" accept="application/pdf" multiple><br><br>
-  <div id="dropZone">Or drag & drop your PDF files here</div>
-  <button id="saveSelectedBtn" style="display: none;">Download</button>
-  <button id="saveToFolderBtn" style="display: none;">Save To Folder</button>
-
-  <table id="resultsTable" style="display: none;">
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="selectAll"></th>
-        <th>Preview</th>
-        <th>Filename</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-
-    const pdfInput = document.getElementById("pdfInput");
-    const dropZone = document.getElementById("dropZone");
-    const resultsTable = document.getElementById("resultsTable");
-    const tableBody = resultsTable.querySelector("tbody");
-    const saveSelectedBtn = document.getElementById("saveSelectedBtn");
-    const selectAllCheckbox = document.getElementById("selectAll");
-
-    const items = []; // { fileName, dataUrl, checkbox }
-
-    // Render queue to prevent concurrent render() on same canvas
-    const renderQueue = [];
-
-    function processPDFFile(file) {
-      renderQueue.push(() => renderPDFFile(file));
-      if (renderQueue.length === 1) {
-        renderQueue[0]();
-      }
-    }
-
-    function renderPDFFile(file) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const typedArray = new Uint8Array(e.target.result);
-
-        pdfjsLib.getDocument({ data: typedArray }).promise
-          .then(pdf => pdf.getPage(1))
-          .then(page => {
-            const scale = 200 / 72; // instead of 150/72
-            const viewport = page.getViewport({ scale });
-
-            // Create separate canvas for this render
-            const renderCanvas = document.createElement("canvas");
-            const renderCtx = renderCanvas.getContext("2d");
-            renderCanvas.width = viewport.width;
-            renderCanvas.height = viewport.height;
-
-            return page.render({
-              canvasContext: renderCtx,
-              viewport
-            }).promise.then(() => {
-              const targetHeight = 320;
-              const ratio = targetHeight / renderCanvas.height;
-              const targetWidth = renderCanvas.width * ratio;
-
-              // Create scaled canvas
-              const scaledCanvas = document.createElement("canvas");
-              const scaledCtx = scaledCanvas.getContext("2d");
-              scaledCanvas.width = targetWidth;
-              scaledCanvas.height = targetHeight;
-              // make the resized image a bit cleaner:
-	      scaledCtx.imageSmoothingEnabled = true;
-              scaledCtx.imageSmoothingQuality = "high";
-              // draw image
-              scaledCtx.drawImage(renderCanvas, 0, 0, targetWidth, targetHeight);
-
-              const dataUrl = scaledCanvas.toDataURL("image/jpeg", 1.0);
-              const fileName = file.name.replace(/\.pdf$/i, '') + "_page_0001.jpg";
-              addRow(fileName, dataUrl);
-            });
-          })
-          .catch(err => alert("Error: " + err.message))
-          .finally(() => {
-            renderQueue.shift();
-            if (renderQueue.length > 0) renderQueue[0]();
-          });
-      };
-
-      reader.readAsArrayBuffer(file);
-    }
-
-    function addRow(fileName, dataUrl) {
-      const row = document.createElement("tr");
-
-      const selectTd = document.createElement("td");
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      selectTd.appendChild(checkbox);
-
-      const previewTd = document.createElement("td");
-      const img = document.createElement("img");
-      img.src = dataUrl;
-      previewTd.appendChild(img);
-
-      const nameTd = document.createElement("td");
-      nameTd.textContent = fileName;
-
-      const actionTd = document.createElement("td");
-      const saveBtn = document.createElement("button");
-      saveBtn.textContent = "Save JPG";
-      saveBtn.addEventListener("click", () => saveAs(dataUrl, fileName));
-      actionTd.appendChild(saveBtn);
-
-      row.appendChild(selectTd);
-      row.appendChild(previewTd);
-      row.appendChild(nameTd);
-      row.appendChild(actionTd);
-      tableBody.appendChild(row);
-
-      items.push({ fileName, dataUrl, checkbox });
-
-      resultsTable.style.display = "table";
-      saveSelectedBtn.style.display = "inline-block";
-      saveToFolderBtn.style.display = "inline-block"; // new
-    }
-
-    function saveAs(dataUrl, fileName) {
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = fileName;
-      a.click();
-    }
-
-    pdfInput.addEventListener("change", () => {
-      for (const file of pdfInput.files) {
-        processPDFFile(file);
-      }
-    });
-
-    dropZone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      dropZone.classList.add("dragover");
-    });
-
-    dropZone.addEventListener("dragleave", () => {
-      dropZone.classList.remove("dragover");
-    });
-
-    dropZone.addEventListener("drop", (e) => {
-      e.preventDefault();
-      dropZone.classList.remove("dragover");
-      for (const file of e.dataTransfer.files) {
-        if (file.name.toLowerCase().endsWith('.pdf')) {
-          processPDFFile(file);
-        }
-      }
-    });
-
-    selectAllCheckbox.addEventListener("change", () => {
-      for (const item of items) {
-        item.checkbox.checked = selectAllCheckbox.checked;
-      }
-    });
-
-   // save to downloads folder
-    saveSelectedBtn.addEventListener("click", () => {
-  const selectedItems = items.filter(item => item.checkbox.checked);
-  if (selectedItems.length === 0) {
-    alert("You haven't selected any files to save. Please select at least one file to save.");
-    return;
-  }
-
-  for (const item of selectedItems) {
-    saveAs(item.dataUrl, item.fileName);
-  }
-});
-
-
-// save to selected folder
-const saveToFolderBtn = document.getElementById("saveToFolderBtn");
-
-saveToFolderBtn.addEventListener("click", async () => {
-  if (!("showDirectoryPicker" in window)) {
-    alert("Vaš preglednik ne podržava odabir mape za spremanje.");
-    return;
-  }
-
-  const selectedItems = items.filter(item => item.checkbox.checked);
-  if (selectedItems.length === 0) {
-    alert("You haven't selected any files to save. Please select at least one file to save.");
-    return;
-  }
-
-  try {
-    const dirHandle = await window.showDirectoryPicker();
-    for (const item of selectedItems) {
-      const fileHandle = await dirHandle.getFileHandle(item.fileName, { create: true });
-      const writable = await fileHandle.createWritable();
-
-      const response = await fetch(item.dataUrl);
-      const blob = await response.blob();
-
-      await writable.write(blob);
-      await writable.close();
-    }
-    alert("Odabrane slike su spremljene u mapu.");
-  } catch (err) {
-    console.error("Greška pri spremanju:", err);
-    alert("Spremanje je prekinuto ili nije uspjelo.");
-  }
-});
-
-
-
-  </script>
-</div>
+	<div id="app">
+	  <h1>First Page PDF to JPG Converter</h1>
+		<p style="color: #666; margin-top: -8px; font-size: 14px;">
+	  		Converts the first page of each PDF to a high-quality JPG thumbnail image.
+		</p>
+	  <h3>Upload Your PDF Files</h3>
+	  <input type="file" id="pdfInput" accept="application/pdf" multiple><br><br>
+	  <div id="dropZone">Or drag & drop your PDF files here</div>
+	  <button id="saveSelectedBtn" style="display: none;">Download</button>
+	  <button id="saveToFolderBtn" style="display: none;">Save To Folder</button>
+	
+	  <table id="resultsTable" style="display: none;">
+	    <thead>
+	      <tr>
+	        <th><input type="checkbox" id="selectAll"></th>
+	        <th>Preview</th>
+	        <th>Filename</th>
+	        <th>Action</th>
+	      </tr>
+	    </thead>
+	    <tbody></tbody>
+	  </table>
+	
+		  <!-- PDF.js -->
+		  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+		  <script>
+		    pdfjsLib.GlobalWorkerOptions.workerSrc =
+		      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+		
+		    const pdfInput = document.getElementById("pdfInput");
+		    const dropZone = document.getElementById("dropZone");
+		    const resultsTable = document.getElementById("resultsTable");
+		    const tableBody = resultsTable.querySelector("tbody");
+		    const saveSelectedBtn = document.getElementById("saveSelectedBtn");
+		    const selectAllCheckbox = document.getElementById("selectAll");
+		
+		    const items = []; // { fileName, dataUrl, checkbox }
+		
+		    // Render queue to prevent concurrent render() on same canvas
+		    const renderQueue = [];
+		
+		    function processPDFFile(file) {
+		      renderQueue.push(() => renderPDFFile(file));
+		      if (renderQueue.length === 1) {
+		        renderQueue[0]();
+		      }
+		    }
+		
+		    function renderPDFFile(file) {
+		      const reader = new FileReader();
+		      reader.onload = function (e) {
+		        const typedArray = new Uint8Array(e.target.result);
+		
+		        pdfjsLib.getDocument({ data: typedArray }).promise
+		          .then(pdf => pdf.getPage(1))
+		          .then(page => {
+		            const scale = 200 / 72; // instead of 150/72
+		            const viewport = page.getViewport({ scale });
+		
+		            // Create separate canvas for this render
+		            const renderCanvas = document.createElement("canvas");
+		            const renderCtx = renderCanvas.getContext("2d");
+		            renderCanvas.width = viewport.width;
+		            renderCanvas.height = viewport.height;
+		
+		            return page.render({
+		              canvasContext: renderCtx,
+		              viewport
+		            }).promise.then(() => {
+		              const targetHeight = 320;
+		              const ratio = targetHeight / renderCanvas.height;
+		              const targetWidth = renderCanvas.width * ratio;
+		
+		              // Create scaled canvas
+		              const scaledCanvas = document.createElement("canvas");
+		              const scaledCtx = scaledCanvas.getContext("2d");
+		              scaledCanvas.width = targetWidth;
+		              scaledCanvas.height = targetHeight;
+		              // make the resized image a bit cleaner:
+			      scaledCtx.imageSmoothingEnabled = true;
+		              scaledCtx.imageSmoothingQuality = "high";
+		              // draw image
+		              scaledCtx.drawImage(renderCanvas, 0, 0, targetWidth, targetHeight);
+		
+		              const dataUrl = scaledCanvas.toDataURL("image/jpeg", 1.0);
+		              const fileName = file.name.replace(/\.pdf$/i, '') + "_page_0001.jpg";
+		              addRow(fileName, dataUrl);
+		            });
+		          })
+		          .catch(err => alert("Error: " + err.message))
+		          .finally(() => {
+		            renderQueue.shift();
+		            if (renderQueue.length > 0) renderQueue[0]();
+		          });
+		      };
+		
+		      reader.readAsArrayBuffer(file);
+		    }
+		
+		    function addRow(fileName, dataUrl) {
+		      const row = document.createElement("tr");
+		
+		      const selectTd = document.createElement("td");
+		      const checkbox = document.createElement("input");
+		      checkbox.type = "checkbox";
+		      selectTd.appendChild(checkbox);
+		
+		      const previewTd = document.createElement("td");
+		      const img = document.createElement("img");
+		      img.src = dataUrl;
+		      previewTd.appendChild(img);
+		
+		      const nameTd = document.createElement("td");
+		      nameTd.textContent = fileName;
+		
+		      const actionTd = document.createElement("td");
+		      const saveBtn = document.createElement("button");
+		      saveBtn.textContent = "Save JPG";
+		      saveBtn.addEventListener("click", () => saveAs(dataUrl, fileName));
+		      actionTd.appendChild(saveBtn);
+		
+		      row.appendChild(selectTd);
+		      row.appendChild(previewTd);
+		      row.appendChild(nameTd);
+		      row.appendChild(actionTd);
+		      tableBody.appendChild(row);
+		
+		      items.push({ fileName, dataUrl, checkbox });
+		
+		      resultsTable.style.display = "table";
+		      saveSelectedBtn.style.display = "inline-block";
+		      saveToFolderBtn.style.display = "inline-block"; // new
+		    }
+		
+		    function saveAs(dataUrl, fileName) {
+		      const a = document.createElement("a");
+		      a.href = dataUrl;
+		      a.download = fileName;
+		      a.click();
+		    }
+		
+		    pdfInput.addEventListener("change", () => {
+		      for (const file of pdfInput.files) {
+		        processPDFFile(file);
+		      }
+		    });
+		
+		    dropZone.addEventListener("dragover", (e) => {
+		      e.preventDefault();
+		      dropZone.classList.add("dragover");
+		    });
+		
+		    dropZone.addEventListener("dragleave", () => {
+		      dropZone.classList.remove("dragover");
+		    });
+		
+		    dropZone.addEventListener("drop", (e) => {
+		      e.preventDefault();
+		      dropZone.classList.remove("dragover");
+		      for (const file of e.dataTransfer.files) {
+		        if (file.name.toLowerCase().endsWith('.pdf')) {
+		          processPDFFile(file);
+		        }
+		      }
+		    });
+		
+		    selectAllCheckbox.addEventListener("change", () => {
+		      for (const item of items) {
+		        item.checkbox.checked = selectAllCheckbox.checked;
+		      }
+		    });
+		
+		   // save to downloads folder
+		    saveSelectedBtn.addEventListener("click", () => {
+		  const selectedItems = items.filter(item => item.checkbox.checked);
+		  if (selectedItems.length === 0) {
+		    alert("You haven't selected any files to save. Please select at least one file to save.");
+		    return;
+		  }
+		
+		  for (const item of selectedItems) {
+		    saveAs(item.dataUrl, item.fileName);
+		  }
+		});
+		
+		
+		// save to selected folder
+		const saveToFolderBtn = document.getElementById("saveToFolderBtn");
+		
+		saveToFolderBtn.addEventListener("click", async () => {
+		  if (!("showDirectoryPicker" in window)) {
+		    alert("Vaš preglednik ne podržava odabir mape za spremanje.");
+		    return;
+		  }
+		
+		  const selectedItems = items.filter(item => item.checkbox.checked);
+		  if (selectedItems.length === 0) {
+		    alert("You haven't selected any files to save. Please select at least one file to save.");
+		    return;
+		  }
+		
+		  try {
+		    const dirHandle = await window.showDirectoryPicker();
+		    for (const item of selectedItems) {
+		      const fileHandle = await dirHandle.getFileHandle(item.fileName, { create: true });
+		      const writable = await fileHandle.createWritable();
+		
+		      const response = await fetch(item.dataUrl);
+		      const blob = await response.blob();
+		
+		      await writable.write(blob);
+		      await writable.close();
+		    }
+		    alert("Odabrane slike su spremljene u mapu.");
+		  } catch (err) {
+		    console.error("Greška pri spremanju:", err);
+		    alert("Spremanje je prekinuto ili nije uspjelo.");
+		  }
+		});
+		</script>
+	</div>
 </body>
 </html>
