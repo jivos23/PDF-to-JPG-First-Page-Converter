@@ -31,7 +31,8 @@ Browser Compatibility:
 
 - Fully supported: Chrome, Edge
 - Partially supported (without folder saving): Firefox, Safari
-- The "Save to Folder" option requires support for the File System Access API, available only in Chromium-based browsers
+
+Note: The "Save to Folder" option requires support for the File System Access API, available only in Chromium-based browsers
 
 Limitations:
 
