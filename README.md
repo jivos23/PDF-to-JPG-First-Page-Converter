@@ -1,7 +1,7 @@
 # PDF-to-JPG-First-Page-Converter
 First Page PDF to JPG Converter converts the first page of each PDF to a high-quality JPG thumbnail image.
 
-This is a simple web-based tool that converts the first page of one or more PDF files into high-quality JPG thumbnail images. It works directly in the browser without any server-side processing. The application allows users to upload or drag-and-drop multiple PDF files, preview the generated images, and download them either individually or in bulk. If the browser supports it, users can also save images directly to a selected local folder.
+This is a simple online/offline web-based tool that converts the first page of one or more PDF files into high-quality JPG thumbnail images. It works directly in the browser without any server-side processing. The application allows users to upload or drag-and-drop multiple PDF files, preview the generated images, and download them either individually or in bulk. If the browser supports it, users can also save images directly to a selected local folder.
 
 Features:
 
